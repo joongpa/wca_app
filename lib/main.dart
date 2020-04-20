@@ -48,6 +48,11 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int selectedIndex = 0;
+  List<Widget> widgetList = <Widget>[
+    RSSList(),
+    Text("Coming Soon!"),
+    Text("Coming Soon!")
+  ];
 
   void onItemTapped(int index) {
     setState(() {
@@ -71,7 +76,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: RSSList()
+        child: widgetList[selectedIndex]
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -169,7 +174,6 @@ class RSSListState extends State<RSSList> {
               title: Text(item.title),
               subtitle: date(item.pubDate),
               trailing: rightIcon()
-              onTap: ,
           ),
           padding: EdgeInsets.symmetric(vertical: 5)
         );
