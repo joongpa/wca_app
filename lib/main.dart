@@ -71,10 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: Padding(
-          padding: EdgeInsets.only(top: 15),
-          child: RSSList()
-        )
+        child: RSSList()
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -151,6 +148,14 @@ class RSSListState extends State<RSSList> {
     );
   }
 
+  rightIcon() {
+    return Icon(
+      Icons.keyboard_arrow_right,
+      color: Colors.grey,
+      size: 30.0,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if(isFeedEmpty()) return CircularProgressIndicator();
@@ -159,9 +164,14 @@ class RSSListState extends State<RSSList> {
       itemCount: feed.items.length,
       itemBuilder: (BuildContext context, int index) {
         final item = feed.items[index];
-        return ListTile(
-          title: Text(item.title),
-          subtitle: date(item.pubDate),
+        return Padding(
+          child: ListTile(
+              title: Text(item.title),
+              subtitle: date(item.pubDate),
+              trailing: rightIcon()
+              onTap: ,
+          ),
+          padding: EdgeInsets.symmetric(vertical: 5)
         );
       },
     );
