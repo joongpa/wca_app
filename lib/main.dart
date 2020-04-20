@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:webfeed/webfeed.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 void main() => runApp(MyApp());
 
@@ -7,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'WCA',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -18,9 +21,9 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        primaryColor: Colors.deepOrange[600],
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'WCA 0'),
     );
   }
 }
@@ -44,16 +47,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  int selectedIndex = 0;
 
-  void _incrementCounter() {
+  void onItemTapped(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      selectedIndex = index;
     });
   }
 
@@ -65,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
@@ -72,40 +71,99 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-          ],
-        ),
+        child: Padding(
+          padding: EdgeInsets.only(top: 15),
+          child: RSSList()
+        )
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), title: Text('Home')),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance), title: Text('Competitions')),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.format_list_numbered_rtl),
+              title: Text('Rankings')),
+        ],
+        onTap: onItemTapped,
+        currentIndex: selectedIndex,
+        selectedItemColor: Theme.of(context).primaryColor,
       ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class RSSList extends StatefulWidget {
+  RSSList({Key key}) : super(key: key);
+
+  @override
+  RSSListState createState() => RSSListState();
+}
+
+class RSSListState extends State<RSSList> {
+  static const String FEED_URL = 'https://www.worldcubeassociation.org/rss';
+  static const String EMPTY = 'Nothing to show';
+  RssFeed feed;
+
+  Future<RssFeed> loadFeed() async {
+    try {
+      final response = await http.Client().get(FEED_URL);
+      return RssFeed.parse(response.body);
+    } catch (e) {}
+    return null;
+  }
+
+  updateFeed(feed) {
+    setState(() {
+      this.feed = feed;
+    });
+  }
+
+  load() async {
+    loadFeed().then((result) {
+      updateFeed(result);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  isFeedEmpty() {
+    return feed == null || feed.toString().isEmpty;
+  }
+
+  subtitle(subtitle) {
+    return Text(
+      subtitle.replaceAll(RegExp(r'<.{0,5}>'),'').replaceAll('&#39;','\''),
+      maxLines: 5,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  date(date) {
+    return Text(
+      date.replaceAll('+0000', ''),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if(isFeedEmpty()) return CircularProgressIndicator();
+    else return ListView.separated(
+      separatorBuilder: (BuildContext context, int index) => Divider(),
+      itemCount: feed.items.length,
+      itemBuilder: (BuildContext context, int index) {
+        final item = feed.items[index];
+        return ListTile(
+          title: Text(item.title),
+          subtitle: date(item.pubDate),
+        );
+      },
     );
   }
 }
