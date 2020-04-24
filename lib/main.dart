@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:wcaapp/CompetitionsPage.dart';
+import 'package:wcaapp/ResultsWidgetPage.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+
+//Todo
+//Double tap to expand/collapse
+
+import 'RSSList.dart';
 
 void main() => runApp(MyApp());
 
@@ -48,11 +55,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int selectedIndex = 0;
-  List<Widget> widgetList = <Widget>[
-    RSSList(),
-    Text("Coming Soon!"),
-    Text("Coming Soon!")
-  ];
+  final controller = PageController(
+      initialPage: 0,
+      keepPage: true
+  );
+
+  final bucket = PageStorageBucket();
 
   void onItemTapped(int index) {
     setState(() {
@@ -62,6 +70,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> widgetList = <Widget>[
+      RSSList(key: PageStorageKey('page1')),
+      CompetitionsPage(key: PageStorageKey('page2')),
+      ResultsWidgetPage(controller: controller)
+    ];
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -78,106 +91,24 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: widgetList[selectedIndex]
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), title: Text('Home')),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance), title: Text('Competitions')),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.format_list_numbered_rtl),
-              title: Text('Rankings')),
-        ],
-        onTap: onItemTapped,
-        currentIndex: selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
-}
-
-class RSSList extends StatefulWidget {
-  RSSList({Key key}) : super(key: key);
-
-  @override
-  RSSListState createState() => RSSListState();
-}
-
-class RSSListState extends State<RSSList> {
-  static const String FEED_URL = 'https://www.worldcubeassociation.org/rss';
-  static const String EMPTY = 'Nothing to show';
-  RssFeed feed;
-
-  Future<RssFeed> loadFeed() async {
-    try {
-      final response = await http.Client().get(FEED_URL);
-      return RssFeed.parse(response.body);
-    } catch (e) {}
-    return null;
-  }
-
-  updateFeed(feed) {
-    setState(() {
-      this.feed = feed;
-    });
-  }
-
-  load() async {
-    loadFeed().then((result) {
-      updateFeed(result);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    load();
-  }
-
-  isFeedEmpty() {
-    return feed == null || feed.toString().isEmpty;
-  }
-
-  subtitle(subtitle) {
-    return Text(
-      subtitle.replaceAll(RegExp(r'<.{0,5}>'),'').replaceAll('&#39;','\''),
-      maxLines: 5,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  date(date) {
-    return Text(
-      date.replaceAll('+0000', ''),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  rightIcon() {
-    return Icon(
-      Icons.keyboard_arrow_right,
-      color: Colors.grey,
-      size: 30.0,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if(isFeedEmpty()) return CircularProgressIndicator();
-    else return ListView.separated(
-      separatorBuilder: (BuildContext context, int index) => Divider(),
-      itemCount: feed.items.length,
-      itemBuilder: (BuildContext context, int index) {
-        final item = feed.items[index];
-        return Padding(
-          child: ListTile(
-              title: Text(item.title),
-              subtitle: date(item.pubDate),
-              trailing: rightIcon()
-          ),
-          padding: EdgeInsets.symmetric(vertical: 5)
-        );
-      },
+      bottomNavigationBar: PageStorage(
+        bucket: bucket,
+        child: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(icon: Icon(Icons.home), title: Text('Home')),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.account_balance), title: Text('Competitions')),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.format_list_numbered_rtl),
+                title: Text('Results')),
+          ],
+          type: BottomNavigationBarType.fixed,
+          onTap: onItemTapped,
+          currentIndex: selectedIndex,
+          selectedItemColor: Theme.of(context).primaryColor,
+        ),
+      ),
+       // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
