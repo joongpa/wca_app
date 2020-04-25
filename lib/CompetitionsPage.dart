@@ -247,6 +247,15 @@ class CompetitionsPageState extends State<CompetitionsPage> {
   Future<List<Competition>> fetchNext(pageNumber) async {
     return fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber');
   }
+
+  void fetchNextPage(pageNumber) async {
+    fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber')
+      .then((result) {
+        setState(() {
+          comps += result;
+        });
+    });
+  }
 //
 //  load() async {
 //    fetchCompetitions()
@@ -289,17 +298,19 @@ class CompetitionsPageState extends State<CompetitionsPage> {
   @override
   void initState() {
     super.initState();
-    pagesLoaded = 0;
+    pagesLoaded = 1;
     scrollController = ScrollController();
     scrollController.addListener(() {
-      if(scrollController.position.pixels >= scrollController.position.maxScrollExtent - 20) {
-        setState(() {
-          pagesLoaded += 1;
-          competitions = fetchNext(pagesLoaded);
-        });
+      if(scrollController.position.pixels == scrollController.position.maxScrollExtent) {
+        pagesLoaded++;
+        fetchNextPage(pagesLoaded);
+//        setState(() {
+//          competitions = fetchNext(++pagesLoaded);
+//        });
       }
     });
-    competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
+    fetchNextPage(pagesLoaded);
+    //competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
   }
 
   @override
@@ -361,19 +372,31 @@ class CompetitionsPageState extends State<CompetitionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Competition>>(
-        future: competitions,
-        builder: (context, snapshot) {
-          if(snapshot.hasData) {
-            comps = comps + snapshot.data;
-            return ListView.builder(
-                controller: scrollController,
-                itemCount: comps.length,
-                itemBuilder: (context, index) => getListCard(index)
-            );
+    if(comps.length != 0) {
+      return ListView.builder(
+          controller: scrollController,
+          itemCount: comps.length + 1,
+          itemBuilder: (context, index) {
+            if(index == comps.length) return Center(child:CircularProgressIndicator());
+            return getListCard(index);
           }
-          else return CircularProgressIndicator();
-        }
-    );
+      );
+    } else return CircularProgressIndicator();
+
+//    return FutureBuilder<bool>(
+//        future: competitions,
+//        builder: (context, snapshot) {
+//          if(snapshot.hasData) {
+//            //comps += snapshot.data;
+//            //comps = comps.toSet().toList();
+//            return ListView.builder(
+//                controller: scrollController,
+//                itemCount: comps.length,
+//                itemBuilder: (context, index) => getListCard(index)
+//            );
+//          }
+//          else return CircularProgressIndicator();
+//        }
+//    );
   }
 }
