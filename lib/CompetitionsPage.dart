@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:country_icons/country_icons.dart';
 
 List<Competition> parseComps(String responseBody) {
   final parsed = json.decode(responseBody).cast<Map<String, dynamic>>();
@@ -228,16 +229,21 @@ class CompetitionsPage extends StatefulWidget {
 }
 
 class CompetitionsPageState extends State<CompetitionsPage> {
-
+  int pagesLoaded;
+  ScrollController scrollController;
   Future<List<Competition>> competitions;
 
   Future<List<Competition>> fetchCompetitions(String url) async {
     final response = await http.get(url);
     if(response.statusCode == 200) {
-        return parseComps(response.body);
+      return parseComps(response.body);
     } else {
       throw Exception('rip');
     }
+  }
+
+  fetchNext() async {
+
   }
 //
 //  load() async {
@@ -249,10 +255,51 @@ class CompetitionsPageState extends State<CompetitionsPage> {
 //    });
 //  }
 
+  getDate(date) {
+    String dateText = date.replaceAll(r'00:00:00.000','');
+    int year = int.parse(date.substring(0, 4));
+    int month = int.parse(date.substring(5, 7));
+    int day = int.parse(date.substring(8, 10));
+
+    Map<int,String> months = {
+      1:'January',
+      2:'February',
+      3:'March',
+      4:'April',
+      5:'May',
+      6:'June',
+      7:'July',
+      8:'August',
+      9:'September',
+      10:'October',
+      11:'November',
+      12:'December',
+    };
+
+    return Text(
+      '${months[month]} $day, $year',
+      style: TextStyle(
+        color: Colors.grey
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?start=2020-4-22');
+    pagesLoaded = 0;
+    scrollController = ScrollController();
+    scrollController.addListener(() {
+      //if(scrollController.position.pixels == scrollController.position.maxScrollExtent)
+
+    });
+    competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    scrollController.dispose();
   }
 
   @override
@@ -263,6 +310,7 @@ class CompetitionsPageState extends State<CompetitionsPage> {
           if(snapshot.hasData) {
             final list = snapshot.data;
             return ListView.builder(
+                controller: scrollController,
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   return Card(
@@ -273,6 +321,18 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
                               Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    children: [
+                                      Image.asset('icons/flags/png/${list[index].countryIso2.toLowerCase()}.png', package: 'country_icons'),
+                                      SizedBox(height: 10),
+                                      Text(list[index].countryIso2,)
+                                    ]
+                                  )
+                              ),
+                              SizedBox(width: 15,),
+                              Expanded(
+                                flex: 10,
                                 child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
@@ -282,18 +342,12 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                                             fontSize: 18
                                         ),
                                       ),
-                                      Text(
-                                          list[index].startDate.toString(),
-                                          style: TextStyle(
-                                              color: Colors.grey
-                                          )
-                                      ),
+                                      getDate(list[index].startDate.toString()),
                                       SizedBox(height: 6),
                                       Text(list[index].city)
                                     ]
                                 ),
                               ),
-                              Text(list[index].countryIso2)
                             ],
                           )
                       )
