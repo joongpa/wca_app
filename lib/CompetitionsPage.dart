@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:country_icons/country_icons.dart';
+import 'package:wcaapp/CompetitionDetailsPage.dart';
 
 List<Competition> parseComps(String responseBody) {
   final parsed = json.decode(responseBody).cast<Map<String, dynamic>>();
@@ -232,7 +233,6 @@ class CompetitionsPageState extends State<CompetitionsPage> {
   int pagesLoaded;
   ScrollController scrollController;
   Future<List<Competition>> competitions;
-
   List<Competition> comps = List<Competition>();
 
   Future<List<Competition>> fetchCompetitions(String url) async {
@@ -244,12 +244,8 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     }
   }
 
-  fetchNext(pageNumber) async {
-    fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber').then(
-      (result){
-        comps = comps + result;
-      }
-    );
+  Future<List<Competition>> fetchNext(pageNumber) async {
+    return fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber');
   }
 //
 //  load() async {
@@ -296,14 +292,13 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     pagesLoaded = 0;
     scrollController = ScrollController();
     scrollController.addListener(() {
-      if(scrollController.position.pixels >= scrollController.position.maxScrollExtent - 10) {
+      if(scrollController.position.pixels >= scrollController.position.maxScrollExtent - 20) {
         setState(() {
           pagesLoaded += 1;
+          competitions = fetchNext(pagesLoaded);
         });
-        fetchNext(pagesLoaded);
       }
     });
-    fetchNext(pagesLoaded);
     competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
   }
 
@@ -313,57 +308,68 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     scrollController.dispose();
   }
 
+  getListCard(index) {
+    return Card(
+      margin: EdgeInsets.all(10),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CompetitionDetailsPage(competition: comps[index],))
+          );
+        },
+        child: Padding(
+          padding: EdgeInsets.all(15),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Expanded(
+                  flex: 1,
+                  child: Column(
+                      children: [
+                        Image.asset('icons/flags/png/${comps[index].countryIso2.toLowerCase()}.png', package: 'country_icons'),
+                        SizedBox(height: 10),
+                        Text(comps[index].countryIso2,)
+                      ]
+                  )
+              ),
+              SizedBox(width: 15,),
+              Expanded(
+                flex: 10,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        comps[index].name,
+                        style: TextStyle(
+                            fontSize: 18
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      getDate(comps[index].startDate.toString()),
+                      SizedBox(height: 6),
+                      Text(comps[index].city)
+                    ]
+                ),
+              ),
+            ],
+          )
+        )
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Competition>>(
         future: competitions,
         builder: (context, snapshot) {
           if(snapshot.hasData) {
-            final list = comps;
+            comps = comps + snapshot.data;
             return ListView.builder(
                 controller: scrollController,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                      margin: EdgeInsets.all(10),
-                      child: Padding(
-                          padding: EdgeInsets.all(15),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Expanded(
-                                  flex: 1,
-                                  child: Column(
-                                    children: [
-                                      Image.asset('icons/flags/png/${list[index].countryIso2.toLowerCase()}.png', package: 'country_icons'),
-                                      SizedBox(height: 10),
-                                      Text(list[index].countryIso2,)
-                                    ]
-                                  )
-                              ),
-                              SizedBox(width: 15,),
-                              Expanded(
-                                flex: 10,
-                                child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Text(
-                                        list[index].name,
-                                        style: TextStyle(
-                                            fontSize: 18
-                                        ),
-                                      ),
-                                      getDate(list[index].startDate.toString()),
-                                      SizedBox(height: 6),
-                                      Text(list[index].city)
-                                    ]
-                                ),
-                              ),
-                            ],
-                          )
-                      )
-                  );
-                }
+                itemCount: comps.length,
+                itemBuilder: (context, index) => getListCard(index)
             );
           }
           else return CircularProgressIndicator();
