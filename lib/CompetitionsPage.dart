@@ -233,6 +233,8 @@ class CompetitionsPageState extends State<CompetitionsPage> {
   ScrollController scrollController;
   Future<List<Competition>> competitions;
 
+  List<Competition> comps = List<Competition>();
+
   Future<List<Competition>> fetchCompetitions(String url) async {
     final response = await http.get(url);
     if(response.statusCode == 200) {
@@ -242,8 +244,12 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     }
   }
 
-  fetchNext() async {
-
+  fetchNext(pageNumber) async {
+    fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber').then(
+      (result){
+        comps = comps + result;
+      }
+    );
   }
 //
 //  load() async {
@@ -290,9 +296,14 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     pagesLoaded = 0;
     scrollController = ScrollController();
     scrollController.addListener(() {
-      //if(scrollController.position.pixels == scrollController.position.maxScrollExtent)
-
+      if(scrollController.position.pixels >= scrollController.position.maxScrollExtent - 10) {
+        setState(() {
+          pagesLoaded += 1;
+        });
+        fetchNext(pagesLoaded);
+      }
     });
+    fetchNext(pagesLoaded);
     competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
   }
 
@@ -308,7 +319,7 @@ class CompetitionsPageState extends State<CompetitionsPage> {
         future: competitions,
         builder: (context, snapshot) {
           if(snapshot.hasData) {
-            final list = snapshot.data;
+            final list = comps;
             return ListView.builder(
                 controller: scrollController,
                 itemCount: list.length,
