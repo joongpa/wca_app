@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:country_icons/country_icons.dart';
 import 'package:wcaapp/CompetitionDetailsPage.dart';
+import 'package:flappy_search_bar/flappy_search_bar.dart';
 
 List<Competition> parseComps(String responseBody) {
   final parsed = json.decode(responseBody).cast<Map<String, dynamic>>();
@@ -222,6 +223,29 @@ class Team {
   };
 }
 
+getDate(date) {
+  int year = int.parse(date.substring(0, 4));
+  int month = int.parse(date.substring(5, 7));
+  int day = int.parse(date.substring(8, 10));
+
+  Map<int,String> months = {
+    1:'January',
+    2:'February',
+    3:'March',
+    4:'April',
+    5:'May',
+    6:'June',
+    7:'July',
+    8:'August',
+    9:'September',
+    10:'October',
+    11:'November',
+    12:'December',
+  };
+
+  return '${months[month]} $day, $year';
+}
+
 class CompetitionsPage extends StatefulWidget {
   CompetitionsPage({Key key}) : super(key: key);
 
@@ -244,10 +268,6 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     }
   }
 
-  Future<List<Competition>> fetchNext(pageNumber) async {
-    return fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber');
-  }
-
   void fetchNextPage(pageNumber) async {
     fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions?page=$pageNumber')
       .then((result) {
@@ -256,43 +276,19 @@ class CompetitionsPageState extends State<CompetitionsPage> {
         });
     });
   }
-//
-//  load() async {
-//    fetchCompetitions()
-//      .then((result) {
-//        setState(() {
-//          competitions = result;
-//        });
-//    });
-//  }
 
-  getDate(date) {
-    String dateText = date.replaceAll(r'00:00:00.000','');
-    int year = int.parse(date.substring(0, 4));
-    int month = int.parse(date.substring(5, 7));
-    int day = int.parse(date.substring(8, 10));
-
-    Map<int,String> months = {
-      1:'January',
-      2:'February',
-      3:'March',
-      4:'April',
-      5:'May',
-      6:'June',
-      7:'July',
-      8:'August',
-      9:'September',
-      10:'October',
-      11:'November',
-      12:'December',
-    };
-
+  getDateText(date) {
     return Text(
-      '${months[month]} $day, $year',
+      getDate(date),
       style: TextStyle(
-        color: Colors.grey
+          color: Colors.grey
       ),
     );
+  }
+
+  getCountryFlag(iso2Code){
+    if(iso2Code.substring(0,1) == "X") return Icon(Icons.language);
+    else return Image.asset('icons/flags/png/${iso2Code.toLowerCase()}.png', package: 'country_icons');
   }
 
   @override
@@ -304,13 +300,9 @@ class CompetitionsPageState extends State<CompetitionsPage> {
       if(scrollController.position.pixels == scrollController.position.maxScrollExtent) {
         pagesLoaded++;
         fetchNextPage(pagesLoaded);
-//        setState(() {
-//          competitions = fetchNext(++pagesLoaded);
-//        });
       }
     });
     fetchNextPage(pagesLoaded);
-    //competitions = fetchCompetitions('https://www.worldcubeassociation.org/api/v0/competitions');
   }
 
   @override
@@ -338,7 +330,7 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                   flex: 1,
                   child: Column(
                       children: [
-                        Image.asset('icons/flags/png/${comps[index].countryIso2.toLowerCase()}.png', package: 'country_icons'),
+                        getCountryFlag(comps[index].countryIso2),
                         SizedBox(height: 10),
                         Text(comps[index].countryIso2,)
                       ]
@@ -353,11 +345,17 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                       Text(
                         comps[index].name,
                         style: TextStyle(
-                            fontSize: 18
+                            fontSize: 18,
+                            color: ((comps[index].name.contains('Championship') && comps[index].competitorLimit >= 250) || (comps[index].competitorLimit != null && comps[index].competitorLimit >= 350))
+                              ? Colors.deepOrange
+                              : Colors.black,
+                            fontWeight: ((comps[index].name.contains('Championship') && comps[index].competitorLimit >= 250) || (comps[index].competitorLimit != null && comps[index].competitorLimit >= 350))
+                              ? FontWeight.bold
+                              : FontWeight.normal
                         ),
                       ),
                       SizedBox(height: 5),
-                      getDate(comps[index].startDate.toString()),
+                      getDateText(comps[index].startDate.toString()),
                       SizedBox(height: 6),
                       Text(comps[index].city)
                     ]
@@ -383,20 +381,5 @@ class CompetitionsPageState extends State<CompetitionsPage> {
       );
     } else return CircularProgressIndicator();
 
-//    return FutureBuilder<bool>(
-//        future: competitions,
-//        builder: (context, snapshot) {
-//          if(snapshot.hasData) {
-//            //comps += snapshot.data;
-//            //comps = comps.toSet().toList();
-//            return ListView.builder(
-//                controller: scrollController,
-//                itemCount: comps.length,
-//                itemBuilder: (context, index) => getListCard(index)
-//            );
-//          }
-//          else return CircularProgressIndicator();
-//        }
-//    );
   }
 }

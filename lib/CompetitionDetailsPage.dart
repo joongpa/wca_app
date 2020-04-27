@@ -27,38 +27,199 @@ class CompetitionDetailsPageState extends State<CompetitionDetailsPage> {
     schedule = fetchSchedule(widget.competition.id);
   }
 
-  String getLocalDate(venue, date) {
-    String timezone = venue.timezone;
+  String getLocalDate(timezone, date) {
     return timeFormat.format(TZDateTime.from(date, getLocation(timezone)));
+  }
+
+  int getHexToInt(String color) {
+    final colorInt = int.parse('0xFF${color.substring(1)}');
+    return colorInt;
+  }
+
+  getRoomLegendMap(snapshot) {
+    var colorRoomPairs = [
+      [],
+      []
+    ];
+    for(int i = 0; i < snapshot.data.venues[0].rooms.length; i++) {
+      colorRoomPairs[0].add(snapshot.data.venues[0].rooms[i].color);
+      colorRoomPairs[1].add(snapshot.data.venues[0].rooms[i].name);
+    }
+    return colorRoomPairs;
+  }
+
+  getRoomLegend(snapshot) {
+    final colorRoomPairs = getRoomLegendMap(snapshot);
+
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+          direction: Axis.horizontal,
+          spacing: 10,
+          runSpacing: 10,
+          children: List.generate(colorRoomPairs[0].length, (index) {
+            return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints.tight(Size.square(20)),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: Color(getHexToInt(colorRoomPairs[0][index]))
+                      ),
+                    ),
+                  ),
+                  Text(('  ${colorRoomPairs[1][index]}'.length < 50) ? '  ${colorRoomPairs[1][index]}' : '  ${colorRoomPairs[1][index].toString().substring(0, 50)}...',
+                    style: TextStyle(
+                    ),
+                  ),
+                ]
+            );
+          })
+      )
+
+    );
+  }
+
+  getEventEntry(snapshot, list, index, concurrent, [times]) {
+    var occurrences = (times == null) ? 1 : times;
+    var timezone = snapshot.data.venues[0].timezone;
+    if(timezone == "Etc/UTC") timezone = "Europe/London";
+    return ListTile(
+        leading: (concurrent)
+          ? Text(getLocalDate(timezone, list[index].startTime),
+              style: TextStyle(
+                color: Colors.transparent,
+                fontSize: 15
+              )
+            )
+          : Text(getLocalDate(timezone, list[index].startTime),
+          style: TextStyle(
+              fontSize: 15
+          )
+          ),
+        title: Text(list[index].name,
+          style: TextStyle(
+            fontSize: 17
+          )
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(occurrences, (i) {
+            return ConstrainedBox(
+              constraints: BoxConstraints.tight(Size.square(20)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    color: Color(getHexToInt(list[index + i].color))
+                ),
+              ),
+            );
+          })
+        )
+    );
+  }
+
+
+  splitByDay(List list, timezone) {
+    var splits = [];
+    var lastUnwanted = 0;
+    for(int i = 1; i < list.length; i++) {
+      if(
+        TZDateTime.from(list[i].startTime, getLocation(timezone)).day !=
+        TZDateTime.from(list[i-1].startTime, getLocation(timezone)).day
+      ){
+        splits.add(list.sublist(lastUnwanted, i));
+        lastUnwanted = i;
+      }
+      if(i == list.length - 1) {
+        splits.add(list.sublist(lastUnwanted, list.length));
+      }
+    }
+    return splits;
   }
 
   getSchedule() => FutureBuilder<Schedule>(
     future: schedule,
     builder: (context, snapshot){
       if(snapshot.hasData){
-        return ListView.builder(
-          itemCount: snapshot.data.venues[0].rooms[0].activities.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              leading: Text(getLocalDate(snapshot.data.venues[0], snapshot.data.venues[0].rooms[0].activities[index].startTime)),
-              title: Text(snapshot.data.venues[0].rooms[0].activities[index].name)
-            );
-          }
+        var list = [];
+        for(int i = 0; i < snapshot.data.venues[0].rooms.length; i++)
+          list += snapshot.data.venues[0].rooms[i].activities;
+        list.sort((a, b) => a.startTime.compareTo(b.startTime));
+        var timezone = snapshot.data.venues[0].timezone;
+        if(timezone == "Etc/UTC") timezone = "Europe/London";
+        //final list = snapshot.data.venues[0].rooms[0].activities;
+        final listByDate = splitByDay(list, timezone);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            getRoomLegend(snapshot),
+            Divider(thickness: 5, height: 5,),
+            Expanded(
+              child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: listByDate.length,
+                  separatorBuilder: (context, index) => SizedBox(height: 45),
+                  itemBuilder: (context, index) {
+                    return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Text('${DateFormat('EEEE').format(TZDateTime.from(listByDate[index][0].startTime, getLocation(timezone)))}, ${getDate(TZDateTime.from(listByDate[index][0].startTime, getLocation(timezone)).toString())}',
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold
+                                )
+                            ),
+                          ),
+                          ListView.builder(
+                              physics: NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              itemCount: listByDate[index].length,
+                              itemBuilder: (c, i) {
+                                if(i < listByDate[index].length - 1) {
+                                  if (listByDate[index][i].name == listByDate[index][i+1].name) {
+                                    return getEventEntry(snapshot, listByDate[index], i, false, 2);
+                                  }
+                                }
+                                if(i == 0) return getEventEntry(snapshot, listByDate[index], i, false);
+                                if (concurrent(listByDate[index][i-1], listByDate[index][i])) {
+                                  if(listByDate[index][i].name == listByDate[index][i-1].name) {
+                                    return Container();
+                                  }
+                                  return getEventEntry(snapshot, listByDate[index], i, true);
+                                }
+                                return getEventEntry(snapshot, listByDate[index], i, false);
+                              }
+                          )
+                        ]
+                    );
+                  }
+              )
+            )
+          ]
         );
       } else {
-        return CircularProgressIndicator();
+        return Center(
+          child: CircularProgressIndicator()
+        );
       }
     },
   );
+
+  bool concurrent(Activity a1, Activity a2) {
+    return a1.startTime.isAtSameMomentAs(a2.startTime);
+  }
 
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
       appBar: AppBar(title: Text(widget.competition.name)),
-      body: Center(
-        child: getSchedule()
-      ),
+      body: getSchedule()
     );
   }
 }
@@ -166,7 +327,7 @@ class Room {
     id: json["id"],
     name: json["name"],
     color: json["color"],
-    activities: List<Activity>.from(json["activities"].map((x) => Activity.fromJson(x))),
+    activities: List<Activity>.from(json["activities"].map((x) => Activity.fromJson(x, json["color"]))),
     extensions: List<RoomExtension>.from(json["extensions"].map((x) => RoomExtension.fromJson(x))),
   );
 
@@ -187,6 +348,7 @@ class Activity {
   DateTime endTime;
   List<Activity> childActivities;
   List<ActivityExtension> extensions;
+  String color;
 
   Activity({
     this.id,
@@ -196,16 +358,18 @@ class Activity {
     this.endTime,
     this.childActivities,
     this.extensions,
+    this.color
   });
 
-  factory Activity.fromJson(Map<String, dynamic> json) => Activity(
+  factory Activity.fromJson(Map<String, dynamic> json, color) => Activity(
     id: json["id"],
     name: json["name"],
     activityCode: json["activityCode"],
     startTime: DateTime.parse(json["startTime"]),
     endTime: DateTime.parse(json["endTime"]),
-    childActivities: List<Activity>.from(json["childActivities"].map((x) => Activity.fromJson(x))),
+    childActivities: List<Activity>.from(json["childActivities"].map((x) => Activity.fromJson(x, color))),
     extensions: List<ActivityExtension>.from(json["extensions"].map((x) => ActivityExtension.fromJson(x))),
+    color: color
   );
 
   Map<String, dynamic> toJson() => {
