@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -259,10 +260,10 @@ class CompetitionsPageState extends State<CompetitionsPage> {
   Future<List<Competition>> competitions;
   List<Competition> comps = List<Competition>();
 
-  Future<List<Competition>> fetchCompetitions(String url) async {
+  static Future<List<Competition>> fetchCompetitions(String url) async {
     final response = await http.get(url);
     if(response.statusCode == 200) {
-      return parseComps(response.body);
+      return compute(parseComps, response.body);
     } else {
       throw Exception('rip');
     }

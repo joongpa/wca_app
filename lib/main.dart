@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:wcaapp/CompetitionsPage.dart';
 import 'package:wcaapp/ResultsWidgetPage.dart';
-import 'package:webfeed/webfeed.dart';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path/path.dart';
 
 //Todo
 //Double tap to expand/collapse
 
 import 'RSSList.dart';
 
-void main() => runApp(MyApp());
+Future<void> main() async => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -28,15 +27,22 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primaryColor: Colors.deepOrange[600],
+        primaryColor: Colors.white,
+        textSelectionColor: Colors.deepOrange,
+        textTheme: TextTheme(
+          title: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold
+          ),
+        ),
       ),
-      home: MyHomePage(title: 'WCA 0'),
+      home: MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+  MyHomePage({Key key}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -47,34 +53,40 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
-  final String title;
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   int selectedIndex = 0;
-  final controller = PageController(
-      initialPage: 0,
-      keepPage: true
-  );
+  String title = 'Home';
+  final controller = PageController(initialPage: 0, keepPage: true);
 
   final bucket = PageStorageBucket();
+
+  List<Widget> widgetList = <Widget>[
+    RSSList(key: PageStorageKey('page1')),
+    CompetitionsPage(key: PageStorageKey('page2')),
+    ResultsWidgetPage()
+  ];
+
+  List<String> pageTitles = <String>[
+    'Home',
+    'Competitions',
+    'Results'
+  ];
+
 
   void onItemTapped(int index) {
     setState(() {
       selectedIndex = index;
+      title = pageTitles[index];
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> widgetList = <Widget>[
-      RSSList(key: PageStorageKey('page1')),
-      CompetitionsPage(key: PageStorageKey('page2')),
-      ResultsWidgetPage(controller: controller)
-    ];
+
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -86,16 +98,19 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.title,
+        ),
       ),
-      body: Center(
-        child: widgetList[selectedIndex]
-      ),
+      body: Center(child: widgetList[selectedIndex]),
       bottomNavigationBar: PageStorage(
         bucket: bucket,
         child: BottomNavigationBar(
           items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home), title: Text('Home')),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.home), title: Text('Home')),
             BottomNavigationBarItem(
                 icon: Icon(Icons.account_balance), title: Text('Competitions')),
             BottomNavigationBarItem(
@@ -105,10 +120,10 @@ class _MyHomePageState extends State<MyHomePage> {
           type: BottomNavigationBarType.fixed,
           onTap: onItemTapped,
           currentIndex: selectedIndex,
-          selectedItemColor: Theme.of(context).primaryColor,
+          selectedItemColor: Theme.of(context).textSelectionColor,
         ),
       ),
-       // This trailing comma makes auto-formatting nicer for build methods.
+      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
