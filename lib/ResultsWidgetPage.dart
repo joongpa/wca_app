@@ -8,7 +8,6 @@ Future<Records> fetchRecords() async {
   final response =
       await http.get('https://www.worldcubeassociation.org/api/v0/records');
   if (response.statusCode == 200) {
-    print("ok");
     return compute(recordsFromJson, response.body);
   } else
     throw Exception('Could not load records');

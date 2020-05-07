@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:wcaapp/CompetitionsPage.dart';
+import 'package:wcaapp/DbProvider.dart';
 import 'package:wcaapp/ResultsWidgetPage.dart';
 import 'package:path/path.dart';
 

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:wcaapp/CompetitionsPage.dart';
 import 'package:timezone/timezone.dart';
 import 'package:timezone/data/latest_2015-2025.dart' as tz;
+import 'Date.dart';
 import 'JSONModels/Schedule.dart';
 
 class CompetitionDetailsPage extends StatefulWidget {
@@ -229,6 +230,3 @@ int getHexToInt(String color) {
   return colorInt;
 }
 
-bool concurrent(Activity a1, Activity a2) {
-  return a1.startTime.isAtSameMomentAs(a2.startTime);
-}

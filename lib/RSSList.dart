@@ -24,6 +24,13 @@ class RSSListState extends State<RSSList> {
   RssFeed feed;
   GlobalKey<RefreshIndicatorState> refreshKey;
 
+  @override
+  void setState(fn) {
+    if(mounted){
+      super.setState(fn);
+    }
+  }
+
   Future<RssFeed> loadFeed() async {
     try {
       final response = await http.Client().get(FEED_URL);
