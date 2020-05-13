@@ -12,17 +12,21 @@ import 'package:html/dom.dart' as dom;
 
 
 class RSSList extends StatefulWidget {
+  RssFeed feed;
   RSSList({Key key}) : super(key: key);
 
   @override
   RSSListState createState() => RSSListState();
 }
 
-class RSSListState extends State<RSSList> {
+class RSSListState extends State<RSSList> with AutomaticKeepAliveClientMixin<RSSList>{
   static const String FEED_URL = 'https://www.worldcubeassociation.org/rss';
   static const String EMPTY = 'Nothing to show';
-  RssFeed feed;
+  //RssFeed feed;
   GlobalKey<RefreshIndicatorState> refreshKey;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void setState(fn) {
@@ -41,7 +45,7 @@ class RSSListState extends State<RSSList> {
 
   updateFeed(feed) {
     setState(() {
-      this.feed = feed;
+      this.widget.feed = feed;
     });
   }
 
@@ -61,12 +65,12 @@ class RSSListState extends State<RSSList> {
   void initState() {
     super.initState();
     refreshKey = GlobalKey<RefreshIndicatorState>();
-    load();
+    if(widget.feed == null) load();
 //    print(database);
   }
 
   isFeedEmpty() {
-    return feed == null || feed.toString().isEmpty;
+    return widget.feed == null || widget.feed.toString().isEmpty;
   }
 
   title(title) {
@@ -165,6 +169,7 @@ class RSSListState extends State<RSSList> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (isFeedEmpty())
       return CircularProgressIndicator();
     else
@@ -174,9 +179,9 @@ class RSSListState extends State<RSSList> {
             await pullLoad();
           },
           child: ListView.builder(
-            itemCount: feed.items.length,
+            itemCount: widget.feed.items.length,
             itemBuilder: (BuildContext context, int index) {
-              final item = feed.items[index];
+              final item = widget.feed.items[index];
               return getExpandableCard(item);
             },
           ));

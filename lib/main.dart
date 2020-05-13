@@ -58,7 +58,11 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMixin<MyHomePage>{
+
+  @override
+  bool get wantKeepAlive => true;
+
   int selectedIndex = 0;
   String title = 'Home';
   final controller = PageController(initialPage: 0, keepPage: true);

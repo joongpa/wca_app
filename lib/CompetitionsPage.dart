@@ -8,18 +8,21 @@ import 'JSONModels/Competition.dart';
 import 'Date.dart';
 
 class CompetitionsPage extends StatefulWidget {
+  List<Competition> _comps = List<Competition>();
+
   CompetitionsPage({Key key}) : super(key: key);
 
   @override
   CompetitionsPageState createState() => CompetitionsPageState();
 }
 
-class CompetitionsPageState extends State<CompetitionsPage> {
+class CompetitionsPageState extends State<CompetitionsPage> with AutomaticKeepAliveClientMixin<CompetitionsPage> {
   GlobalKey refreshKey;
   int pagesLoaded;
   ScrollController scrollController;
-//  Future<List<Competition>> competitions;
-  List<Competition> comps = List<Competition>();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void setState(fn) {
@@ -28,19 +31,10 @@ class CompetitionsPageState extends State<CompetitionsPage> {
     }
   }
 
-//  static Future<List<Competition>> fetchCompetitions(String url) async {
-//    final response = await http.get(url);
-//    if(response.statusCode == 200) {
-//      return compute(parseComps, response.body);
-//    } else {
-//      throw Exception('rip');
-//    }
-//  }
-//
   void fetchNextPage(pageNumber) async {
     CompetitionRepo.cr.fetchCompetitions(pagesLoaded).then((result) {
       setState(() {
-        comps += result;
+        widget._comps += result;
       });
     });
   }
@@ -67,24 +61,24 @@ class CompetitionsPageState extends State<CompetitionsPage> {
 
   @override
   void initState() {
-    super.initState();
+    pagesLoaded = widget._comps.length ~/ 25;
     refreshKey = GlobalKey<RefreshIndicatorState>();
     scrollController = ScrollController();
-    load();
+    if(widget._comps.length == 0)load();
     scrollController.addListener(() {
       if(scrollController.position.pixels == scrollController.position.maxScrollExtent) {
         pagesLoaded++;
         fetchNextPage(pagesLoaded);
       }
     });
+    super.initState();
   }
 
   void load() async {
     CompetitionRepo.cr.competitions.then((result) {
       setState(() {
-        comps = result;
+        widget._comps = result;
       });
-      pagesLoaded = comps.length ~/ 25;
     });
   }
 
@@ -101,7 +95,7 @@ class CompetitionsPageState extends State<CompetitionsPage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => CompetitionDetailsPage(competition: comps[index],))
+            MaterialPageRoute(builder: (context) => CompetitionDetailsPage(competition: widget._comps[index],))
           );
         },
         child: Padding(
@@ -113,9 +107,9 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                   flex: 1,
                   child: Column(
                       children: [
-                        getCountryFlag(comps[index].countryIso2),
+                        getCountryFlag(widget._comps[index].countryIso2),
                         SizedBox(height: 10),
-                        Text(comps[index].countryIso2,)
+                        Text(widget._comps[index].countryIso2,)
                       ]
                   )
               ),
@@ -126,21 +120,21 @@ class CompetitionsPageState extends State<CompetitionsPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        comps[index].name,
+                        widget._comps[index].name,
                         style: TextStyle(
                             fontSize: 18,
-                            color: ((comps[index].name.contains('Championship') && comps[index].competitorLimit >= 250) || (comps[index].competitorLimit != null && comps[index].competitorLimit >= 350))
+                            color: ((widget._comps[index].name.contains('Championship') && widget._comps[index].competitorLimit >= 250) || (widget._comps[index].competitorLimit != null && widget._comps[index].competitorLimit >= 350))
                               ? Colors.deepOrange
                               : Colors.black,
-                            fontWeight: ((comps[index].name.contains('Championship') && comps[index].competitorLimit >= 250) || (comps[index].competitorLimit != null && comps[index].competitorLimit >= 350))
+                            fontWeight: ((widget._comps[index].name.contains('Championship') && widget._comps[index].competitorLimit >= 250) || (widget._comps[index].competitorLimit != null && widget._comps[index].competitorLimit >= 350))
                               ? FontWeight.bold
                               : FontWeight.normal
                         ),
                       ),
                       SizedBox(height: 5),
-                      getDateText(comps[index].startDate.toString()),
+                      getDateText(widget._comps[index].startDate.toString()),
                       SizedBox(height: 6),
-                      Text(comps[index].city)
+                      Text(widget._comps[index].city)
                     ]
                 ),
               ),
@@ -153,7 +147,8 @@ class CompetitionsPageState extends State<CompetitionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    if(comps.length != 0) {
+    super.build(context);
+    if(widget._comps.length != 0) {
       return RefreshIndicator(
         key: refreshKey,
         onRefresh: () async {
@@ -161,9 +156,9 @@ class CompetitionsPageState extends State<CompetitionsPage> {
         },
         child: ListView.builder(
             controller: scrollController,
-            itemCount: comps.length + 1,
+            itemCount: widget._comps.length + 1,
             itemBuilder: (context, index) {
-              if(index == comps.length) return Center(child:CircularProgressIndicator());
+              if(index == widget._comps.length) return Center(child:CircularProgressIndicator());
               return getListCard(index);
             }
         ),
